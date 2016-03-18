@@ -66,10 +66,24 @@ function interceptor(pretender) {
   };
 
   // passthrough handling
-  var evts = ['load', 'error', 'timeout', 'progress', 'abort', 'readystatechange'];
+  var evts = ['error', 'timeout', 'abort'];
   var lifecycleProps = ['readyState', 'responseText', 'responseXML', 'status', 'statusText'];
   function createPassthrough(fakeXHR) {
     var xhr = fakeXHR._passthroughRequest = new pretender._nativeXMLHttpRequest();
+
+    // Use onload instead of onreadystatechange if the browser supports it
+    if ('onload' in xhr) {
+      evts.push('load');
+    } else {
+      evts.push('readystatechange');
+    }
+
+    // add progress event for async calls
+    if (fakeXHR.async) {
+      evts.push('progress');
+    }
+
+
     // listen to all events to update lifecycle properties
     for (var i = 0; i < evts.length; i++) (function(evt) {
       xhr['on' + evt] = function(e) {
@@ -88,8 +102,12 @@ function interceptor(pretender) {
       };
     })(evts[i]);
     xhr.open(fakeXHR.method, fakeXHR.url, fakeXHR.async, fakeXHR.username, fakeXHR.password);
-    xhr.timeout = fakeXHR.timeout;
-    xhr.withCredentials = fakeXHR.withCredentials;
+
+    if (fakeXHR.async) {
+      xhr.timeout = fakeXHR.timeout;
+      xhr.withCredentials = fakeXHR.withCredentials;
+    }
+
     for (var h in fakeXHR.requestHeaders) {
       xhr.setRequestHeader(h, fakeXHR.requestHeaders[h]);
     }

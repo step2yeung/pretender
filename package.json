@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/trek/pretender.git"
+    "url": "https://github.com/step2yeung/pretender.git"
   },
   "devDependencies": {
     "bower": "^1.3.5",

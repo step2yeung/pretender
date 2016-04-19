@@ -12,7 +12,7 @@ var slice = [].slice;
  * @return {Object} parts of the URL, including the following
  *
  * 'https://www.yahoo.com:1234/mypage?test=yes#abc'
- * 
+ *
  * {
  *   host: 'www.yahoo.com:1234',
  *   protocol: 'https:',
@@ -34,8 +34,8 @@ function parseURL(url) {
 
 /**
  * Registry
- * 
- * A registry is a map of HTTP verbs to route recognizers. 
+ *
+ * A registry is a map of HTTP verbs to route recognizers.
  */
 
 function Registry(host) {
@@ -52,7 +52,7 @@ function Registry(host) {
 
 /**
  * Hosts
- * 
+ *
  * a map of hosts to Registries, ultimately allowing
  * a per-host-and-port, per HTTP verb lookup of RouteRecognizers
  */
@@ -63,11 +63,11 @@ function Hosts() {
 /**
  * Hosts#forURL - retrieve a map of HTTP verbs to RouteRecognizers
  *                for a given URL
- * 
+ *
  * @param  {String} url a URL
- * @return {Registry}   a map of HTTP verbs to RouteRecognizers 
- *                      corresponding to the provided URL's 
- *                      hostname and port 
+ * @return {Registry}   a map of HTTP verbs to RouteRecognizers
+ *                      corresponding to the provided URL's
+ *                      hostname and port
  */
 Hosts.prototype.forURL = function(url) {
   var host = parseURL(url).host;
@@ -134,17 +134,23 @@ function interceptor(pretender) {
   };
 
   // passthrough handling
-  var evts = ['error', 'timeout', 'progress', 'abort'];
+  var evts = ['error', 'timeout', 'abort'];
   var lifecycleProps = ['readyState', 'responseText', 'responseXML', 'status', 'statusText'];
   function createPassthrough(fakeXHR) {
     var xhr = fakeXHR._passthroughRequest = new pretender._nativeXMLHttpRequest();
 
-    // use onload instead of onreadystatechange if the browser supports it
+    // Use onload instead of onreadystatechange if the browser supports it
     if ('onload' in xhr) {
       evts.push('load');
     } else {
       evts.push('readystatechange');
     }
+
+    // add progress event for async calls
+    if (fakeXHR.async) {
+      evts.push('progress');
+    }
+
 
     // listen to all events to update lifecycle properties
     for (var i = 0; i < evts.length; i++) (function(evt) {
@@ -164,8 +170,12 @@ function interceptor(pretender) {
       };
     })(evts[i]);
     xhr.open(fakeXHR.method, fakeXHR.url, fakeXHR.async, fakeXHR.username, fakeXHR.password);
-    xhr.timeout = fakeXHR.timeout;
-    xhr.withCredentials = fakeXHR.withCredentials;
+
+    if (fakeXHR.async) {
+      xhr.timeout = fakeXHR.timeout;
+      xhr.withCredentials = fakeXHR.withCredentials;
+    }
+
     for (var h in fakeXHR.requestHeaders) {
       xhr.setRequestHeader(h, fakeXHR.requestHeaders[h]);
     }
